@@ -1,3 +1,5 @@
+*.rdbg
+
 # Prerequisites
 *.d
 
