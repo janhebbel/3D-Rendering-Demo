@@ -86,8 +86,7 @@ typedef void   type_glUniform1i(GLint location, GLint v0);
 
 #define opengl_function(name) type_##name *name
 
-typedef struct
-{
+struct opengl {
     GLuint default_program;
     GLuint vertex_buffer;
     GLuint index_buffer;
@@ -129,13 +128,10 @@ typedef struct
     opengl_function(glValidateProgram);
     opengl_function(glUniform3fv);
     opengl_function(glUniform1i);
-} 
-opengl_t;
+};
 
-GL_DEBUG_CALLBACK(opengl_debug_callback)
-{
-    if(severity == GL_DEBUG_SEVERITY_HIGH)
-    {
+GL_DEBUG_CALLBACK(opengl_debug_callback) {
+    if(severity == GL_DEBUG_SEVERITY_HIGH) {
         wchar_t *error_message = (wchar_t *)message;
         
         OutputDebugString(L"OPENGL: ");
@@ -146,8 +142,7 @@ GL_DEBUG_CALLBACK(opengl_debug_callback)
     }
 }
 
-void compile_default_program(opengl_t *opengl)
-{
+void compile_default_program(struct opengl *opengl) {
     int vertex_code_size[1];
     GLuint vertex_shader = opengl->glCreateShader(GL_VERTEX_SHADER);
     const GLchar *vertex_code = (const GLchar *)read_entire_file(L"../shaders/default.vert", vertex_code_size);
@@ -171,8 +166,7 @@ void compile_default_program(opengl_t *opengl)
     opengl->glValidateProgram(program);
     GLint linked = false;
     opengl->glGetProgramiv(program, GL_LINK_STATUS, &linked);
-    if(!linked)
-    {
+    if(!linked) {
         char vertex_errors[1024] = {0};
         char fragment_errors[1024] = {0};
         char program_errors[1024] = {0};
@@ -199,11 +193,10 @@ void compile_default_program(opengl_t *opengl)
     opengl->default_program = program;
 }
 
-void opengl_init(opengl_t *opengl)
+void opengl_init(struct opengl *opengl)
 {
 #if defined(_DEBUG)
-    if(opengl->glDebugMessageCallback)
-    {
+    if(opengl->glDebugMessageCallback) {
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         opengl->glDebugMessageCallback(opengl_debug_callback, NULL);
     }
@@ -222,8 +215,7 @@ void opengl_init(opengl_t *opengl)
     opengl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, opengl->index_buffer);
 }
 
-void opengl_render(opengl_t *opengl, int window_width, int window_height, scene_t *scene, view_control_t *control)
-{
+void opengl_draw_scene(struct opengl *opengl, int window_width, int window_height, struct scene *scene, view_control_t *control) {
     glEnable(GL_CULL_FACE);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -236,10 +228,12 @@ void opengl_render(opengl_t *opengl, int window_width, int window_height, scene_
     opengl->glNamedBufferData(opengl->vertex_buffer, scene->vertex_count * sizeof(*scene->vertex_array), scene->vertex_array, GL_STATIC_DRAW);
     opengl->glNamedBufferData(opengl->index_buffer, scene->index_count * sizeof(*scene->index_array), scene->index_array, GL_STATIC_DRAW);
     
-    opengl->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(textured_vertex_t), (void *)offsetof(textured_vertex_t, position));
-    opengl->glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(textured_vertex_t), (void *)offsetof(textured_vertex_t, uv));
+    opengl->glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(struct textured_vertex), (void *)offsetof(struct textured_vertex, position));
+    opengl->glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(struct textured_vertex), (void *)offsetof(struct textured_vertex, uv));
+    opengl->glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(struct textured_vertex), (void *)offsetof(struct textured_vertex, normal));
     opengl->glEnableVertexAttribArray(0);
     opengl->glEnableVertexAttribArray(1);
+    opengl->glEnableVertexAttribArray(2);
     
     opengl->glUseProgram(opengl->default_program);
     
@@ -250,7 +244,7 @@ void opengl_render(opengl_t *opengl, int window_width, int window_height, scene_
 
     cglm_mat4_identity(model);
     cglm_look_at(control->position, center, control->up, view);
-    cglm_perspective(control->fov, 16.0f / 9.0f, 0.1f, 100.0f, projection);
+    cglm_perspective(control->fov, (float)window_height / (float)window_width, 0.1f, 100.0f, projection);
 
     cglm_mat4_mul3(projection, view, model, mvp);
     cglm_mat4_mul(projection, view, mvp);

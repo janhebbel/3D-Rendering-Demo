@@ -6,7 +6,6 @@ in vec2 uv;
 
 layout(location = 0) out vec4 frag_color;
 
-void main() 
-{
+void main() {
     frag_color = vec4(0.14, 0.35, 0.22, 1.0); // texture(u_texture, uv)
 }

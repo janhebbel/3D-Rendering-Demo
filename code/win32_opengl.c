@@ -29,12 +29,10 @@ wgl_get_extensions_string_ext *wglGetExtensionsStringEXT;
 wgl_get_extensions_string_arb *wglGetExtensionsStringARB;
 wgl_swap_interval_ext *wglSwapIntervalEXT;
 
-void set_pixel_format(HDC window_dc)
-{
+void set_pixel_format(HDC window_dc) {
     int suggested_pixel_format_index = 0;
     UINT suitable_formats = 0;
-    if(wglChoosePixelFormatARB)
-    {
+    if(wglChoosePixelFormatARB) {
         // Set Pixel Format
         int attribute_list[] = {
             WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
@@ -52,8 +50,7 @@ void set_pixel_format(HDC window_dc)
         wglChoosePixelFormatARB(window_dc, attribute_list, NULL, 1, &suggested_pixel_format_index, &suitable_formats);
     }
     
-    if(!suitable_formats)
-    {
+    if(!suitable_formats) {
         PIXELFORMATDESCRIPTOR desired_pixel_format = {0};
         
         desired_pixel_format.nSize = sizeof(PIXELFORMATDESCRIPTOR);
@@ -75,15 +72,13 @@ void set_pixel_format(HDC window_dc)
     SetPixelFormat(window_dc, suggested_pixel_format_index, &suggested_pixel_format);
 }
 
-void load_wgl_extensions(opengl_t *opengl)
-{
+void load_wgl_extensions(struct opengl *opengl) {
     WNDCLASS window_class = {0};
     window_class.lpfnWndProc = DefWindowProc;
     window_class.hInstance = GetModuleHandle(0);
     window_class.lpszClassName = L"HandmadeGameWGLLoader";
     
-    if(RegisterClass(&window_class))
-    {
+    if(RegisterClass(&window_class)) {
         HWND window = CreateWindowEx(
                                      0,
                                      window_class.lpszClassName,
@@ -104,20 +99,17 @@ void load_wgl_extensions(opengl_t *opengl)
         
         HGLRC opengl_rc = wglCreateContext(window_dc);
         
-        if(wglMakeCurrent(window_dc, opengl_rc))
-        {
+        if(wglMakeCurrent(window_dc, opengl_rc)) {
             wglChoosePixelFormatARB = (wgl_choose_pixel_format_arb *)wglGetProcAddress("wglChoosePixelFormatARB");
             wglCreateContextAttribsARB = (wgl_create_context_attribs_arb *)wglGetProcAddress("wglCreateContextAttribsARB");
             wglGetExtensionsStringEXT = (wgl_get_extensions_string_ext *)wglGetProcAddress("wglGetExtensionsStringEXT");
             wglGetExtensionsStringARB = (wgl_get_extensions_string_arb *)wglGetProcAddress("wglGetExtensionsStringARB");
             wglSwapIntervalEXT = (wgl_swap_interval_ext *)wglGetProcAddress("wglSwapIntervalEXT");
             
-            if(wglGetExtensionsStringEXT)
-            {
+            if(wglGetExtensionsStringEXT) {
                 char *extensions = (char *)wglGetExtensionsStringEXT();
                 char *at = extensions;
-                while(*at)
-                {
+                while(*at) {
                     while(*at == ' ') ++at;
                     char *end = at;
                     while(*end && *end != ' ') ++end;
@@ -141,9 +133,8 @@ void load_wgl_extensions(opengl_t *opengl)
     }
 }
 
-opengl_t *platform_opengl_init(HDC renderer_dc, int max_quad_count_per_frame)
-{
-    opengl_t *opengl = malloc(sizeof(*opengl));
+struct opengl *platform_opengl_init(HDC renderer_dc, int max_quad_count_per_frame) {
+    struct opengl *opengl = malloc(sizeof(*opengl));
     load_wgl_extensions(opengl);
     set_pixel_format(renderer_dc);
     
@@ -159,18 +150,15 @@ opengl_t *platform_opengl_init(HDC renderer_dc, int max_quad_count_per_frame)
     };
     
     HGLRC opengl_rc = 0;
-    if(wglCreateContextAttribsARB)
-    {
+    if(wglCreateContextAttribsARB) {
         opengl_rc = wglCreateContextAttribsARB(renderer_dc, 0, opengl_attributes);
     }
     
-    if(!opengl_rc)
-    {
+    if(!opengl_rc) {
         opengl_rc = wglCreateContext(renderer_dc);
     }
     
-    if(wglMakeCurrent(renderer_dc, opengl_rc))
-    {
+    if(wglMakeCurrent(renderer_dc, opengl_rc)) {
         
 #define get_opengl_function(name) opengl->name = (type_##name *)wglGetProcAddress(#name);
         

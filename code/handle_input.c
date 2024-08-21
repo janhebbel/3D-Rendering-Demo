@@ -1,29 +1,23 @@
-typedef struct
-{
+typedef struct {
     vec3 position;
     vec3 forward;
     vec3 up;
     float fov;
     float speed;
     float sensitivity;
-} 
-view_control_t;
+} view_control_t;
 
-typedef struct
-{
+typedef struct {
     double yoffset;
     int    updated;
-}
-scroll_update_t;
+} scroll_update_t;
 
 ivec2 global_initial_cursor_position;
 scroll_update_t global_scroll_update;
 
-void handle_input(double delta_time, view_control_t *control)
-{
+void handle_input(double delta_time, view_control_t *control) {
     // left mouse button pressed
-    if(is_down(MOUSE_RBUTTON)) 
-    {
+    if(is_down(MOUSE_RBUTTON))  {
         double xpos, ypos;
                 
         POINT cursor_position;
@@ -34,8 +28,7 @@ void handle_input(double delta_time, view_control_t *control)
         float dx = (float)(xpos - global_initial_cursor_position[0]) * control->sensitivity;
         float dy = -(float)(ypos - global_initial_cursor_position[1]) * control->sensitivity;
         
-        if(dx || dy)
-        {
+        if(dx || dy) {
             SetCursorPos(global_initial_cursor_position[0], global_initial_cursor_position[1]);
         }
         
@@ -55,23 +48,19 @@ void handle_input(double delta_time, view_control_t *control)
 
         vec3 add = {0};
         
-        if(is_down('W'))
-        {
+        if(is_down('W')) {
             cglm_vec3_add(add, control->forward, add);
         }
-        if(is_down('A'))
-        {
+        if(is_down('A')) {
             vec3 tmp;
             cglm_vec3_cross(control->forward, control->up, tmp);
             cglm_vec3_normalize_this(tmp);
             cglm_vec3_sub(add, tmp, add);
         }
-        if(is_down('S'))
-        {
+        if(is_down('S')) {
             cglm_vec3_sub(add, control->forward, add);
         }
-        if(is_down('D'))
-        {
+        if(is_down('D')) {
             vec3 tmp;
             cglm_vec3_cross(control->forward, control->up, tmp);
             cglm_vec3_normalize_this(tmp);
@@ -82,12 +71,10 @@ void handle_input(double delta_time, view_control_t *control)
         cglm_vec3_add(control->position, add, control->position);
     }
 
-    if(global_scroll_update.updated)
-    {
+    if(global_scroll_update.updated) {
         float dfov = (float)global_scroll_update.yoffset / 100.0f;
         float new_fov = control->fov + dfov;
-        if(new_fov > 0.0f && new_fov < 0.4f)
-        {
+        if(new_fov > 0.0f && new_fov < 0.4f) {
             control->fov = new_fov;
         }
         

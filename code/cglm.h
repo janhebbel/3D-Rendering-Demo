@@ -22,8 +22,7 @@ typedef vec4 mat4[4];
 #define TABLE_SIZE 257
 #define STEP_SIZE 0.25f * 2 * PI / (TABLE_SIZE - 1)
 
-float table[TABLE_SIZE] = 
-{
+float table[TABLE_SIZE] = {
     0.0000000f, 0.0061359f, 0.0122715f, 0.0184067f, 0.0245412f, 0.0306748f, 
     0.0368072f, 0.0429383f, 0.0490677f, 0.0551952f, 0.0613207f, 0.0674439f, 
     0.0735646f, 0.0796824f, 0.0857973f, 0.0919090f, 0.0980171f, 0.1041216f, 
@@ -144,38 +143,30 @@ CGLMDEF void cglm_perspective2(float fov, float aspect, float znear, float zfar,
 
 //
 // trigonometric functions
-CGLMDEF float 
-cglm_sin(float turn)
-{
-    float normalized_turn = turn - (int)turn;
-    if (normalized_turn < 0.0f) normalized_turn = 1.0f + normalized_turn;
+CGLMDEF float cglm_sin(float turn) {
+    float normalized_turn = turn - floorf(turn); /* keep turn in range 0..1 */
     
     int mirror = 0;
     int flip = 0;
     
     float index;
-    if (normalized_turn >= 0.0f && normalized_turn < 0.25f)
-    {
+    if (normalized_turn >= 0.0f && normalized_turn < 0.25f) {
         index = normalized_turn * 4.0f * (TABLE_SIZE - 1);
     }
-    else if (normalized_turn >= 0.25f && normalized_turn < 0.5f)
-    {
+    else if (normalized_turn >= 0.25f && normalized_turn < 0.5f) {
         index = (normalized_turn - 0.25f) * 4.0f * (TABLE_SIZE - 1);
         mirror = 1;
     }
-    else if (normalized_turn >= 0.5f && normalized_turn < 0.75f)
-    {
+    else if (normalized_turn >= 0.5f && normalized_turn < 0.75f) {
         index = (normalized_turn - 0.5f) * 4.0f * (TABLE_SIZE - 1);
         flip = 1;
     }
-    else
-    {
+    else {
         index = (normalized_turn - 0.75f) * 4.0f * (TABLE_SIZE - 1);
         mirror = 1;
         flip = 1;
     }
-    if (mirror)
-    {
+    if (mirror) {
         index = (TABLE_SIZE - 1) - index;
     }
     int index0 = (int)index;
@@ -184,48 +175,38 @@ cglm_sin(float turn)
     float lerp = table[index0] + (((table[index1] - table[index0]) / STEP_SIZE) *
                                   ((index - index0) * STEP_SIZE));
     
-    if (flip)
-    {
+    if (flip) {
         return(-lerp);
     }
-    else
-    {
+    else {
         return(lerp);
     }
 }
 
-CGLMDEF float 
-cglm_cos(float turn)
-{
-    float normalized_turn = turn - (int)turn;
-    if (normalized_turn < 0.0f) normalized_turn = 1.0f + normalized_turn;
+CGLMDEF float cglm_cos(float turn) {
+    float normalized_turn = turn - floorf(turn); /* keep turn in range 0..1 */
     
     int mirror = 0;
     int flip = 0;
     
     float index;
-    if (normalized_turn >= 0.0f && normalized_turn < 0.25f)
-    {
+    if (normalized_turn >= 0.0f && normalized_turn < 0.25f) {
         index = normalized_turn * 4.0f * (TABLE_SIZE - 1);
         mirror = 1;
     }
-    else if (normalized_turn >= 0.25f && normalized_turn < 0.5f)
-    {
+    else if (normalized_turn >= 0.25f && normalized_turn < 0.5f) {
         index = (normalized_turn - 0.25f) * 4.0f * (TABLE_SIZE - 1);
         flip = 1;
     }
-    else if (normalized_turn >= 0.5f && normalized_turn < 0.75f)
-    {
+    else if (normalized_turn >= 0.5f && normalized_turn < 0.75f) {
         index = (normalized_turn - 0.5f) * 4.0f * (TABLE_SIZE - 1);
         mirror = 1;
         flip = 1;
     }
-    else
-    {
+    else {
         index = (normalized_turn - 0.75f) * 4.0f * (TABLE_SIZE - 1);
     }
-    if (mirror)
-    {
+    if (mirror) {
         index = (TABLE_SIZE - 1) - index;
     }
     int index0 = (int)index;
@@ -234,301 +215,220 @@ cglm_cos(float turn)
     float lerp = table[index0] + (((table[index1] - table[index0]) / STEP_SIZE) *
                                   ((index - index0) * STEP_SIZE));
     
-    if (flip)
-    {
+    if (flip) {
         return(-lerp);
     }
-    else
-    {
+    else {
         return(lerp);
     }    
 }
 
-CGLMDEF float 
-cglm_tan(float turn)
-{
+CGLMDEF float cglm_tan(float turn) {
     return(cglm_sin(turn) / cglm_cos(turn));
 }
 
-CGLMDEF float 
-cglm_cot(float turn)
-{
+CGLMDEF float cglm_cot(float turn) {
     return(cglm_cos(turn) / cglm_sin(turn));
 }
 
 //
 // float vector 2
-CGLMDEF void 
-cglm_vec2_add(vec2 v1, vec2 v2, vec2 dst)
-{
+CGLMDEF void cglm_vec2_add(vec2 v1, vec2 v2, vec2 dst) {
     dst[0] = v1[0] + v2[0];
     dst[1] = v1[1] + v2[1];
 }
 
-CGLMDEF void 
-cglm_vec2_sub(vec2 v1, vec2 v2, vec2 dst)
-{
+CGLMDEF void cglm_vec2_sub(vec2 v1, vec2 v2, vec2 dst) {
     dst[0] = v1[0] - v2[0];
     dst[1] = v1[1] - v2[1];
 }
 
-CGLMDEF void 
-cglm_vec2_mul(vec2 v1, vec2 v2, vec2 dst)
-{
+CGLMDEF void cglm_vec2_mul(vec2 v1, vec2 v2, vec2 dst) {
     dst[0] = v1[0] * v2[0];
     dst[1] = v1[1] * v2[1];
 }
 
-CGLMDEF void 
-cglm_vec2_div(vec2 v1, vec2 v2, vec2 dst)
-{
+CGLMDEF void cglm_vec2_div(vec2 v1, vec2 v2, vec2 dst) {
     dst[0] = v1[0] / v2[0];
     dst[1] = v1[1] / v2[1];
 }
 
-CGLMDEF float 
-cglm_vec2_dot(vec2 v1, vec2 v2)
-{
+CGLMDEF float cglm_vec2_dot(vec2 v1, vec2 v2) {
     return(v1[0] * v2[0] + v1[1] * v2[1]);
 }
 
-CGLMDEF float 
-cglm_vec2_len(vec2 v)
-{
+CGLMDEF float cglm_vec2_len(vec2 v) {
     return(sqrtf(cglm_vec2_dot(v, v)));
 }
 
-CGLMDEF void
-cglm_vec2_normalize(vec2 v, vec2 dst)
-{
+CGLMDEF void cglm_vec2_normalize(vec2 v, vec2 dst) {
     float len = cglm_vec2_len(v);
     dst[0] = v[0] / len;
     dst[1] = v[1] / len;
     dst[2] = v[2] / len;
 }
 
-CGLMDEF void
-cglm_vec2_normalize_this(vec2 v)
-{
+CGLMDEF void cglm_vec2_normalize_this(vec2 v) {
     cglm_vec2_normalize(v, v);
 }
 
-CGLMDEF void 
-cglm_vec2_scale(vec2 v, float s, vec2 dst)
-{
+CGLMDEF void cglm_vec2_scale(vec2 v, float s, vec2 dst) {
     dst[0] = v[0] * s;
     dst[1] = v[1] * s;
 }
 
-CGLMDEF void 
-cglm_vec2_scale_this(vec2 v, float s)
-{
+CGLMDEF void  cglm_vec2_scale_this(vec2 v, float s) {
     cglm_vec2_scale(v, s, v);
 }
 
 //
 // float vector 3
-CGLMDEF void 
-cglm_vec3_add(vec3 v1, vec3 v2, vec3 dst)
-{
+CGLMDEF void cglm_vec3_add(vec3 v1, vec3 v2, vec3 dst) {
     dst[0] = v1[0] + v2[0];
     dst[1] = v1[1] + v2[1];
     dst[2] = v1[2] + v2[2];
 }
 
-CGLMDEF void 
-cglm_vec3_sub(vec3 v1, vec3 v2, vec3 dst)
-{
+CGLMDEF void cglm_vec3_sub(vec3 v1, vec3 v2, vec3 dst) {
     dst[0] = v1[0] - v2[0];
     dst[1] = v1[1] - v2[1];
     dst[2] = v1[2] - v2[2];
 }
 
-CGLMDEF void 
-cglm_vec3_mul(vec3 v1, vec3 v2, vec3 dst)
-{
+CGLMDEF void cglm_vec3_mul(vec3 v1, vec3 v2, vec3 dst) {
     dst[0] = v1[0] * v2[0];
     dst[1] = v1[1] * v2[1];
     dst[2] = v1[2] * v2[2];
 }
 
-CGLMDEF void 
-cglm_vec3_div(vec3 v1, vec3 v2, vec3 dst)
-{
+CGLMDEF void cglm_vec3_div(vec3 v1, vec3 v2, vec3 dst) {
     dst[0] = v1[0] / v2[0];
     dst[1] = v1[1] / v2[1];
     dst[2] = v1[2] / v2[2];
 }
 
-CGLMDEF float 
-cglm_vec3_dot(vec3 v1, vec3 v2)
-{
+CGLMDEF float cglm_vec3_dot(vec3 v1, vec3 v2) {
     return(v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2]);
 }
 
-CGLMDEF float 
-cglm_vec3_len(vec3 v)
-{
+CGLMDEF float cglm_vec3_len(vec3 v) {
     return(sqrtf(cglm_vec3_dot(v, v)));
 }
 
-CGLMDEF void
-cglm_vec3_normalize(vec3 v, vec3 dst)
-{
+CGLMDEF void cglm_vec3_normalize(vec3 v, vec3 dst) {
     float len = cglm_vec3_len(v);
     dst[0] = v[0] / len;
     dst[1] = v[1] / len;
     dst[2] = v[2] / len;
 }
 
-CGLMDEF void
-cglm_vec3_normalize_this(vec3 v)
-{
+CGLMDEF void cglm_vec3_normalize_this(vec3 v) {
     cglm_vec3_normalize(v, v);
 }
 
-CGLMDEF void 
-cglm_vec3_cross(vec3 v1, vec3 v2, vec3 dst)
-{
+CGLMDEF void cglm_vec3_cross(vec3 v1, vec3 v2, vec3 dst) {
     dst[0] = v1[1] * v2[2] - v1[2] * v2[1];
     dst[1] = v1[2] * v2[0] - v1[0] * v2[2];
     dst[2] = v1[0] * v2[1] - v1[1] * v2[0];
 }
 
-CGLMDEF void 
-cglm_vec3_scale(vec3 v, float s, vec3 dst)
-{
+CGLMDEF void cglm_vec3_scale(vec3 v, float s, vec3 dst) {
     dst[0] = v[0] * s;
     dst[1] = v[1] * s;
     dst[2] = v[2] * s;
 }
 
-CGLMDEF void 
-cglm_vec3_scale_this(vec3 v, float s)
-{
+CGLMDEF void cglm_vec3_scale_this(vec3 v, float s) {
     cglm_vec3_scale(v, s, v);
 }
 
 //
 // float vector 4
-CGLMDEF void 
-cglm_vec4_add(vec4 v1, vec4 v2, vec4 dst)
-{
+CGLMDEF void cglm_vec4_add(vec4 v1, vec4 v2, vec4 dst) {
     dst[0] = v1[0] + v2[0];
     dst[1] = v1[1] + v2[1];
     dst[2] = v1[2] + v2[2];
     dst[3] = v1[3] + v2[3];
 }
 
-CGLMDEF void 
-cglm_vec4_sub(vec4 v1, vec4 v2, vec4 dst)
-{
+CGLMDEF void cglm_vec4_sub(vec4 v1, vec4 v2, vec4 dst) {
     dst[0] = v1[0] - v2[0];
     dst[1] = v1[1] - v2[1];
     dst[2] = v1[2] - v2[2];
     dst[3] = v1[3] - v2[3];
 }
 
-CGLMDEF void 
-cglm_vec4_mul(vec4 v1, vec4 v2, vec4 dst)
-{
+CGLMDEF void cglm_vec4_mul(vec4 v1, vec4 v2, vec4 dst) {
     dst[0] = v1[0] * v2[0];
     dst[1] = v1[1] * v2[1];
     dst[2] = v1[2] * v2[2];
     dst[3] = v1[3] * v2[3];
 }
 
-CGLMDEF void 
-cglm_vec4_div(vec4 v1, vec4 v2, vec4 dst)
-{
+CGLMDEF void cglm_vec4_div(vec4 v1, vec4 v2, vec4 dst) {
     dst[0] = v1[0] / v2[0];
     dst[1] = v1[1] / v2[1];
     dst[2] = v1[2] / v2[2];
     dst[3] = v1[3] / v2[3];
 }
 
-CGLMDEF float 
-cglm_vec4_dot(vec4 v1, vec4 v2)
-{
+CGLMDEF float cglm_vec4_dot(vec4 v1, vec4 v2) {
     return(v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2] + v1[3] * v2[3]);
 }
 
-CGLMDEF float 
-cglm_vec4_len(vec4 v)
-{
+CGLMDEF float cglm_vec4_len(vec4 v) {
     return(sqrtf(cglm_vec4_dot(v, v)));
 }
 
-CGLMDEF void
-cglm_vec4_normalize(vec4 v, vec4 dst)
-{
+CGLMDEF void cglm_vec4_normalize(vec4 v, vec4 dst) {
     float len = cglm_vec4_len(v);
     dst[0] = v[0] / len;
     dst[1] = v[1] / len;
     dst[2] = v[2] / len;
 }
 
-CGLMDEF void
-cglm_vec4_normalize_this(vec4 v)
-{
+CGLMDEF void cglm_vec4_normalize_this(vec4 v) {
     cglm_vec4_normalize(v, v);
 }
 
-CGLMDEF void 
-cglm_vec4_scale(vec4 v, float s, vec4 dst)
-{
+CGLMDEF void cglm_vec4_scale(vec4 v, float s, vec4 dst) {
     dst[0] = v[0] * s;
     dst[1] = v[1] * s;
     dst[2] = v[2] * s;
     dst[3] = v[3] * s;
 }
 
-CGLMDEF void 
-cglm_vec4_scale_this(vec4 v, float s)
-{
+CGLMDEF void cglm_vec4_scale_this(vec4 v, float s) {
     cglm_vec4_scale(v, s, v);
 }
 
 //
 // float matrix 4 by 4
-CGLMDEF void 
-cglm_mat4_fill(float v, mat4 dst)
-{
+CGLMDEF void cglm_mat4_fill(float v, mat4 dst) {
     float *p = (float *)dst;
-    for(int i = 0; i < 16; ++i)
-    {
+    for(int i = 0; i < 16; ++i) {
         p[i] = v;
     }
 }
 
-CGLMDEF void 
-cglm_mat4_identity(mat4 m)
-{
+CGLMDEF void cglm_mat4_identity(mat4 m) {
     m[0][0] = 1.0f, m[0][1] = 0.0f, m[0][2] = 0.0f, m[0][3] = 0.0f;
     m[1][0] = 0.0f, m[1][1] = 1.0f, m[1][2] = 0.0f, m[1][3] = 0.0f;
     m[2][0] = 0.0f, m[2][1] = 0.0f, m[2][2] = 1.0f, m[2][3] = 0.0f;
     m[3][0] = 0.0f, m[3][1] = 0.0f, m[3][2] = 0.0f, m[3][3] = 1.0f;
 }
 
-CGLMDEF void 
-cglm_mat4_transpose(mat4 m, mat4 dst)
-{
-    for(int i = 0; i < 4; ++i)
-    {
-        for(int j = 0; j < 4; ++j)
-        {
+CGLMDEF void cglm_mat4_transpose(mat4 m, mat4 dst) {
+    for(int i = 0; i < 4; ++i) {
+        for(int j = 0; j < 4; ++j) {
             dst[j][i] = m[i][j];
         }
     }
 }
 
-CGLMDEF void 
-cglm_mat4_transpose_this(mat4 m)
-{
-    for(int i = 0; i < 4; ++i)
-    {
-        for(int j = i + 1; j < 4; ++j)
-        {
+CGLMDEF void cglm_mat4_transpose_this(mat4 m) {
+    for(int i = 0; i < 4; ++i) {
+        for(int j = i + 1; j < 4; ++j) {
             float f = m[i][j];
             m[i][j] = m[j][i];
             m[j][i] = f;
@@ -536,9 +436,7 @@ cglm_mat4_transpose_this(mat4 m)
     }
 }
 
-CGLMDEF void 
-cglm_mat4_add(mat4 m1, mat4 m2, mat4 dst)
-{
+CGLMDEF void cglm_mat4_add(mat4 m1, mat4 m2, mat4 dst) {
     // TODO: what is faster?
     /*
     dst = (mat4)
@@ -549,47 +447,34 @@ cglm_mat4_add(mat4 m1, mat4 m2, mat4 dst)
         {m1[3][0] + m2[3][0], m1[3][1] + m2[3][1], m1[3][2] + m2[3][2], m1[3][3] + m2[3][3]}
     };
     */
-    for(int row = 0; row < 4; ++row)
-    {
-        for(int column = 0; column < 4; ++column)
-        {
+    for(int row = 0; row < 4; ++row) {
+        for(int column = 0; column < 4; ++column) {
             dst[row][column] = m1[row][column] + m2[row][column];
         }
     }
 }
 
 
-CGLMDEF void 
-cglm_mat4_sub(mat4 m1, mat4 m2, mat4 dst)
-{
-    for(int row = 0; row < 4; ++row)
-    {
-        for(int column = 0; column < 4; ++column)
-        {
+CGLMDEF void cglm_mat4_sub(mat4 m1, mat4 m2, mat4 dst) {
+    for(int row = 0; row < 4; ++row) {
+        for(int column = 0; column < 4; ++column) {
             dst[row][column] = m1[row][column] - m2[row][column];
         }
     }
 }
 
-CGLMDEF void 
-cglm_mat4_mul(mat4 m1, mat4 m2, mat4 dst)
-{
-    for (int i = 0; i < 4; ++i) // row of m1
-    {
-        for (int j = 0; j < 4; ++j) // column of m2
-        {
+CGLMDEF void  cglm_mat4_mul(mat4 m1, mat4 m2, mat4 dst) {
+    for (int i = 0; i < 4; ++i) { /* row of m1 */
+        for (int j = 0; j < 4; ++j) { /* column of m2 */
             dst[j][i] = 0.0f;
-            for (int k = 0; k < 4; ++k)
-            {
+            for (int k = 0; k < 4; ++k) {
                 dst[j][i] += m1[k][i] * m2[j][k];
             }
         }
     }
 }
 
-CGLMDEF void 
-cglm_mat4_mul3(mat4 m1, mat4 m2, mat4 m3, mat4 dst)
-{
+CGLMDEF void cglm_mat4_mul3(mat4 m1, mat4 m2, mat4 m3, mat4 dst) {
     mat4 tmp;
     cglm_mat4_mul(m3, m2, tmp);
     cglm_mat4_mul(tmp, m1, dst);
@@ -597,14 +482,10 @@ cglm_mat4_mul3(mat4 m1, mat4 m2, mat4 m3, mat4 dst)
 
 //
 // float matrix vector operations
-CGLMDEF void 
-cglm_mat4_vec4_mul(mat4 m, vec4 v, vec4 dst)
-{
-    for (int i = 0; i < 4; ++i) // row of m
-    {
+CGLMDEF void cglm_mat4_vec4_mul(mat4 m, vec4 v, vec4 dst) {
+    for (int i = 0; i < 4; ++i) { // row of m
         dst[i] = 0.0f;
-        for (int k = 0; k < 4; ++k)
-        {
+        for (int k = 0; k < 4; ++k) {
             dst[i] += m[k][i] * v[k];
         }
     }
@@ -612,9 +493,7 @@ cglm_mat4_vec4_mul(mat4 m, vec4 v, vec4 dst)
 
 //
 // transformations
-CGLMDEF void 
-cglm_look_at(vec3 position, vec3 target, vec3 fake_up, mat4 dst)
-{
+CGLMDEF void cglm_look_at(vec3 position, vec3 target, vec3 fake_up, mat4 dst) {
     vec3 backward, right, up;
 
     cglm_vec3_sub(position, target, backward);
@@ -637,9 +516,7 @@ cglm_look_at(vec3 position, vec3 target, vec3 fake_up, mat4 dst)
     dst[3][0] = -cos1,    dst[3][1] = -cos2, dst[3][2] = -cos3,       dst[3][3] = 1.0f;
 }
 
-CGLMDEF void 
-cglm_orthographic(float left, float right, float bottom, float top, float znear, float zfar, mat4 dst)
-{
+CGLMDEF void cglm_orthographic(float left, float right, float bottom, float top, float znear, float zfar, mat4 dst) {
     float width = right - left;
     float height = top - bottom;
     float depth = zfar - znear;
@@ -654,21 +531,17 @@ cglm_orthographic(float left, float right, float bottom, float top, float znear,
     dst[3][0] = -m30,          dst[3][1] = -m31,          dst[3][2] = -m32,          dst[3][3] = 1.0f;
 }
 
-CGLMDEF void 
-cglm_perspective(float fov, float aspect, float znear, float zfar, mat4 dst)
-{
+CGLMDEF void cglm_perspective(float fov, float aspect, float znear, float zfar, mat4 dst) {
     float f = cglm_cot(0.5f * fov);
     float inv_depth = 1.0f / (znear - zfar);
 
-    dst[0][0] = f / aspect, dst[0][1] = 0.0f, dst[0][2] = 0.0f,                         dst[0][3] =  0.0f;
+    dst[0][0] = f * aspect, dst[0][1] = 0.0f, dst[0][2] = 0.0f,                         dst[0][3] =  0.0f;
     dst[1][0] = 0.0f,       dst[1][1] = f,    dst[1][2] = 0.0f,                         dst[1][3] =  0.0f;
     dst[2][0] = 0.0f,       dst[2][1] = 0.0f, dst[2][2] = (zfar + znear) * inv_depth,   dst[2][3] = -1.0f;
     dst[3][0] = 0.0f,       dst[3][1] = 0.0f, dst[3][2] = 2 * zfar * znear * inv_depth, dst[3][3] =  0.0f;
 }
 
-CGLMDEF void 
-cglm_perspective2(float fov, float aspect, float znear, float zfar, mat4 dst)
-{
+CGLMDEF void cglm_perspective2(float fov, float aspect, float znear, float zfar, mat4 dst) {
     float right = znear * cglm_tan(fov * 0.5f);
     float top = right * aspect;
     float inv_d = 1.0f / (zfar - znear);
