@@ -215,7 +215,7 @@ void opengl_init(struct opengl *opengl)
     opengl->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, opengl->index_buffer);
 }
 
-void opengl_draw_scene(struct opengl *opengl, int window_width, int window_height, struct scene *scene, view_control_t *control) {
+void opengl_draw_scene(struct opengl *opengl, int window_width, int window_height, Scene *scene, view_control_t *control) {
     glEnable(GL_CULL_FACE);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -228,9 +228,9 @@ void opengl_draw_scene(struct opengl *opengl, int window_width, int window_heigh
     opengl->glNamedBufferData(opengl->vertex_buffer, scene->vertex_count * sizeof(*scene->vertex_array), scene->vertex_array, GL_STATIC_DRAW);
     opengl->glNamedBufferData(opengl->index_buffer, scene->index_count * sizeof(*scene->index_array), scene->index_array, GL_STATIC_DRAW);
     
-    opengl->glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(struct textured_vertex), (void *)offsetof(struct textured_vertex, position));
-    opengl->glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(struct textured_vertex), (void *)offsetof(struct textured_vertex, uv));
-    opengl->glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(struct textured_vertex), (void *)offsetof(struct textured_vertex, normal));
+    opengl->glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(Textured_Vertex), (void *)offsetof(Textured_Vertex, position));
+    opengl->glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Textured_Vertex), (void *)offsetof(Textured_Vertex, uv));
+    opengl->glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Textured_Vertex), (void *)offsetof(Textured_Vertex, normal));
     opengl->glEnableVertexAttribArray(0);
     opengl->glEnableVertexAttribArray(1);
     opengl->glEnableVertexAttribArray(2);

@@ -1,5 +1,9 @@
 @echo off
 
+if not defined DevEnvDir (
+    call vcvarsall.bat x64
+)
+
 if not exist build mkdir build
 pushd build
 
