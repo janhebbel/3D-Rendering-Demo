@@ -5,10 +5,10 @@ enum Lexer_State {
 	STATE_NUMBER,
 	STATE_SLASH,
 	STATE_KEYWORD_OR_IDENTIFIER,
+	STATE_IDENTIFIER
 };
 
 enum Token_Type {
-	ITEM_NONE = -1,
 	ITEM_v, // this has to be the first token type
 	ITEM_vn,
 	ITEM_vt,
@@ -27,6 +27,28 @@ typedef struct Token {
 	String_View value;
 } Token;
 
+typedef struct Tokens {
+	Token *items;
+	int count;
+	int cap;
+} Tokens;
+
+Tokens tokens_init(int initial_count) {
+	Tokens ts = {0};
+	ts.items = smalloc(initial_count * sizeof(*ts.items));
+	ts.count = 0;
+	ts.cap = initial_count;
+	return ts;
+}
+
+void tokens_append(Tokens *ts, Token t) {
+	if (ts->count >= ts->cap) {
+		ts->cap *= 2;
+		ts->items = srealloc(ts->items, ts->cap * sizeof(ts->items[0]));
+	}
+	ts->items[ts->count++] = t;
+}
+
 //
 // Lexer 
 
@@ -40,16 +62,27 @@ typedef struct Lexer {
 	bool done;
 } Lexer;
 
-Token next(Lexer *l) {
-	Token t = {0};
+char lexer_peek(Lexer *l) {
+	return (l->index + 1 < l->file_size) ? l->file[l->index] : 0;
+}
+
+char lexer_consume(Lexer *l) {
+	return (l->index + 1 < l->file_size) ? l->file[l->index++] : 0;
+}
+
+Tokens tokenize(Lexer *l) {
+	// Using heuristic that assumes #tokens < file_size to avoid reallocations.
+	Tokens tokens = tokens_init(l->file_size);
 	
 	int word_start = 0;
 	int word_length = 0;
 	
 	bool dot = false;
 	
-	while (l->index < l->file_size) { 
-		char c = l->file[l->index];
+	bool done = false;
+	
+	while (!done) { 
+		char c = lexer_peek(l);
 
 		switch(l->state) {
 		case STATE_START:
@@ -68,10 +101,13 @@ Token next(Lexer *l) {
 			break;
 		case STATE_WORD_START:
 			word_start = l->index;
-			if (c == '-' || c == '+' || c == '.' || is_numeric(c)) { // TODO!
+			// TODO: unfinished if-else-block
+			if (c == '-' || c == '+' || c == '.' || is_numeric(c)) {
 				l->state = STATE_NUMBER;
 			} else if (is_alphabetic(c)) {
 				l->state = STATE_KEYWORD_OR_IDENTIFIER;
+			} else if (c == '/') {
+				l->state = STATE_SLASH;
 			}
 			break;
 		case STATE_NUMBER:
@@ -79,7 +115,8 @@ Token next(Lexer *l) {
 				l->index++;
 			} else if (c == '.') {
 				if (dot) {
-					// TODO: Error, 2 dots in a number!
+					assert(!"Error while parsing. Encountered two decimal points while parsing a number.");
+					return tokens;
 				} else {
 					l->index++;
 					dot = true;
@@ -91,51 +128,69 @@ Token next(Lexer *l) {
 				} else if (c == '/') {
 					l->state = STATE_SLASH;
 				}
-				t.type = ITEM_NUMBER;
-				t.value = (String_View){l->file + word_start, word_length};
-				goto done;
+				tokens_append(&tokens, (Token){ITEM_NUMBER, (String_View){l->file + word_start, word_length}});
 			} else {
-				// TODO: Error
+				assert(!"Error while parsing. Encountered illegal character while parsing a number.");
+				return tokens;
 			}
 			break;
 		case STATE_KEYWORD_OR_IDENTIFIER:
-			// TODO
+			if (c == 'v' || c == 'f' || c == 'o') { // TODO: not all beginning characters for every keyword listed
+				
+			} else { // Not a keyword but an identifier
+				l->state = STATE_IDENTIFIER;
+			}
 			break;
 		case STATE_SLASH:
-			// TODO
+			l->index++; // FIXME: this coorect?
+			tokens_append(&tokens, (Token){ITEM_NUMBER, (String_View){l->file + word_start, word_length}});
+			// TODO: which state?
 			break;
 		}
 	}
 	
-done:
-	return t;
+	return tokens;
 }
 
-Token peek(Lexer *lexer) {
+//
+// Parser
+
+typedef struct Parser {
+	Tokens tokens;
+	
+	bool done;
+	
+	// TODO...
+} Parser;
+
+Token next(Parser *p) {
 	return STUB(Token);
 }
 
-bool expect(Lexer *lexer, Token expected) {
-	Token t = next(lexer);
+Token peek(Parser *p) {
+	return STUB(Token);
+}
+
+bool expect(Parser *p, Token expected) {
+	Token t = next(p);
 	if (t.type == expected.type) {
 		return false;		
 	}
 	return true;
 }
 
-//
-// Parser
 
 Scene obj_parse(byte *obj_file_data, int file_size) {
-	if (!obj_file_data || file_size == 0) {
-		return STUB(Scene);
-	}
+	assert(obj_file_data && file_size > 0);
 	
 	Scene s = {0};
 	
 	Lexer lexer = {(char *)obj_file_data, file_size};
-	while (!lexer.done) {
-		Token t = next(&lexer);
+	Tokens tokens = tokenize(&lexer);
+	
+	Parser parser = {tokens};
+	while (!parser.done) {
+		Token t = next(&parser);
 		
 		switch(t.type) {
 		case ITEM_v: 

@@ -167,5 +167,30 @@ inline void *smalloc(size_t size) {
 		assert(!"Failed malloc!");
 		exit(-1);
 	}
-	return m;
+	return memset(m, 0, size);
 }
+
+inline void *srealloc(void *ptr, size_t size) {
+	void *n = realloc(ptr, size);
+	if (!n) {
+		assert(!"Failed realloc!");
+		exit(-1);
+	}
+	return memset(n, 0, size);
+}
+
+// Credit: Tsoding
+// this macro assumes that things is a struct consisting of the following fields:
+// * items
+// * count
+// * cap
+#define da_append(things, thing)\
+	do {\
+		if (things.count >= things.cap) {\
+			if (things.cap == 0) things.cap = 256;\
+			else things.cap *= 2;\
+			things.items = srealloc(things.items, things.cap * sizeof(things.items[0]));\
+		}\
+		things.items[things.count++] = thing;\
+	} while(0)
+		
