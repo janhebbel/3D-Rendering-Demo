@@ -23,7 +23,7 @@ enum Token_Type {
 #define TOKEN_IS_KEYWORD(token) ((token).type >= ITEM_v && (token).type <= ITEM_o)
 
 typedef struct Token {
-	int type;
+	enum Token_Type type;
 	String_View value;
 } Token;
 
@@ -52,103 +52,94 @@ void tokens_append(Tokens *ts, Token t) {
 //
 // Lexer 
 
+// TODO: fix /n situation
+
 typedef struct Lexer {
 	char *file;
 	int file_size;
 	
 	int index;
 	int state;
-	
-	bool done;
 } Lexer;
 
-char lexer_peek(Lexer *l) {
-	return (l->index + 1 < l->file_size) ? l->file[l->index] : 0;
+// advances the internal index if s and string are equal
+bool lexer_maybe(Lexer *l, String_View s, char *string) {
+	if (strings_are_equal_1l(s.length, s.start, string)) {
+		l->index += s.length;
+		return true;
+	}
+	return false;
 }
 
-char lexer_consume(Lexer *l) {
-	return (l->index + 1 < l->file_size) ? l->file[l->index++] : 0;
+String_View get_next_word(char *chars, int size, int offset, char *delim) {
+	String_View s = {chars + offset};
+	int length = 0;
+	while (length + offset < size) {
+		int d_index = 0;
+		while (delim[d_index]) {
+			if (delim[d_index] == chars[offset + length]) {
+				s.length = length;
+				return s;
+			} else {
+				d_index++;
+			}
+		}
+		length++;
+	}
+	return s;
 }
 
 Tokens tokenize(Lexer *l) {
 	// Using heuristic that assumes #tokens < file_size to avoid reallocations.
 	Tokens tokens = tokens_init(l->file_size);
 	
-	int word_start = 0;
-	int word_length = 0;
+	// int word_start = 0;
+	// int word_length = 0;
 	
-	bool dot = false;
+	// bool dot = false;
 	
 	bool done = false;
 	
-	while (!done) { 
-		char c = lexer_peek(l);
-
-		switch(l->state) {
-		case STATE_START:
-			if (is_whitespace(c)) {
-				l->state = STATE_WHITESPACE;
+	// scanning line by line
+	while (!done) {
+		// skip any whitespaces
+		while (l->index < l->file_size && is_whitespace(l->file[l->index]))
+			l->index++;
+		
+		// scan one line
+		while (l->index < l->file_size && !is_end_of_line(l->file[l->index])) {
+			//char c = l->file[l->index];
+			
+			// scan keyword
+			String_View s = get_next_word(l->file, l->file_size, l->index, " \n\r\t\v\f");
+			if (lexer_maybe(l, s, "v")) {
+				tokens_append(&tokens, (Token){ITEM_v, 0});
+				// TODO: scan 3 or 4 floats
+			} else if (lexer_maybe(l, s, "vt")) {
+				tokens_append(&tokens, (Token){ITEM_vt, 0});
+				// TODO: scan 1-3 floats
+			} else if (lexer_maybe(l, s, "vn")) {
+				tokens_append(&tokens, (Token){ITEM_vn, 0});
+				// TODO: scan 3 floats
+			} else if (lexer_maybe(l, s, "vp")) {
+				tokens_append(&tokens, (Token){ITEM_vp, 0});
+				// TODO: scan ??
+			} else if (lexer_maybe(l, s, "f")) {
+				tokens_append(&tokens, (Token){ITEM_f, 0});
+				// TODO: scan whatever the fuck this is
+			} else if (lexer_maybe(l, s, "o")) {
+				tokens_append(&tokens, (Token){ITEM_o, 0});
+				// TODO: scan identifier
 			} else {
-				l->state = STATE_WORD_START;
-			}
-			break;
-		case STATE_WHITESPACE:
-			if (is_whitespace(c)) {
-				l->index++;
-			} else {
-				l->state = STATE_WORD_START;
-			}
-			break;
-		case STATE_WORD_START:
-			word_start = l->index;
-			// TODO: unfinished if-else-block
-			if (c == '-' || c == '+' || c == '.' || is_numeric(c)) {
-				l->state = STATE_NUMBER;
-			} else if (is_alphabetic(c)) {
-				l->state = STATE_KEYWORD_OR_IDENTIFIER;
-			} else if (c == '/') {
-				l->state = STATE_SLASH;
-			}
-			break;
-		case STATE_NUMBER:
-			if (is_numeric(c)) {
-				l->index++;
-			} else if (c == '.') {
-				if (dot) {
-					assert(!"Error while parsing. Encountered two decimal points while parsing a number.");
-					return tokens;
-				} else {
-					l->index++;
-					dot = true;
-				}
-			} else if (is_whitespace(c) || c == '/') { // number is done parsing
-				word_length = l->index - word_start;
-				if(is_whitespace(c)) {
-					l->state = STATE_WHITESPACE;
-				} else if (c == '/') {
-					l->state = STATE_SLASH;
-				}
-				tokens_append(&tokens, (Token){ITEM_NUMBER, (String_View){l->file + word_start, word_length}});
-			} else {
-				assert(!"Error while parsing. Encountered illegal character while parsing a number.");
+				// Error! Expected keyword.
+				assert(!"Error while parsing. Keyword expected.");
 				return tokens;
 			}
-			break;
-		case STATE_KEYWORD_OR_IDENTIFIER:
-			if (c == 'v' || c == 'f' || c == 'o') { // TODO: not all beginning characters for every keyword listed
-				
-			} else { // Not a keyword but an identifier
-				l->state = STATE_IDENTIFIER;
-			}
-			break;
-		case STATE_SLASH:
-			l->index++; // FIXME: this coorect?
-			tokens_append(&tokens, (Token){ITEM_NUMBER, (String_View){l->file + word_start, word_length}});
-			// TODO: which state?
-			break;
 		}
+		
+		done = l->index == l->file_size - 1;
 	}
-	
+			
 	return tokens;
 }
 

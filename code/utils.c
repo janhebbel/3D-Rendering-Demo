@@ -139,7 +139,7 @@ byte *read_file(char *filename, int *filesize) {
 		return NULL;
 	}
 	
-	FILE *file = fopen(filename, "r");
+	FILE *file = fopen(filename, "rb");
 	fseek(file, 0, SEEK_END);
 	int size = ftell(file) + 1;
 	rewind(file);
