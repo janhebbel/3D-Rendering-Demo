@@ -1,13 +1,3 @@
-enum Lexer_State {
-	STATE_START,
-	STATE_WHITESPACE,
-	STATE_WORD_START,
-	STATE_NUMBER,
-	STATE_SLASH,
-	STATE_KEYWORD_OR_IDENTIFIER,
-	STATE_IDENTIFIER
-};
-
 enum Token_Type {
 	ITEM_v, // this has to be the first token type
 	ITEM_vn,
@@ -15,7 +5,8 @@ enum Token_Type {
 	ITEM_vp,
 	ITEM_f,
 	ITEM_o, // this has to be the last token type
-	ITEM_NUMBER,
+	ITEM_FLOAT,
+	ITEM_INT,
 	ITEM_IDENTIFIER,
 	ITEM_SLASH
 };
@@ -24,7 +15,11 @@ enum Token_Type {
 
 typedef struct Token {
 	enum Token_Type type;
-	String_View value;
+	union {
+		int i;
+		float f;
+		String_View s;
+	} value;
 } Token;
 
 typedef struct Tokens {
@@ -52,8 +47,6 @@ void tokens_append(Tokens *ts, Token t) {
 //
 // Lexer 
 
-// TODO: fix /n situation
-
 typedef struct Lexer {
 	char *file;
 	int file_size;
@@ -61,6 +54,20 @@ typedef struct Lexer {
 	int index;
 	int state;
 } Lexer;
+
+bool is_obj_int(char *string, int length) {
+	assert(length != 0 && string != NULL);
+	char c = string[0];
+	if (!is_numeric(c) && c != '+' && c != '-')
+		return false;
+	for(int i = 1; i < length; ++i) {
+		c = string[i];
+		if(!is_numeric(c)) {
+			return false;
+		}
+	}
+	return true;
+}
 
 // advances the internal index if s and string are equal
 bool lexer_maybe(Lexer *l, String_View s, char *string) {
@@ -71,24 +78,21 @@ bool lexer_maybe(Lexer *l, String_View s, char *string) {
 	return false;
 }
 
-String_View get_next_word(char *chars, int size, int offset, char *delim) {
-	String_View s = {chars + offset};
-	int length = 0;
-	while (length + offset < size) {
-		int d_index = 0;
-		while (delim[d_index]) {
-			if (delim[d_index] == chars[offset + length]) {
-				s.length = length;
-				return s;
-			} else {
-				d_index++;
-			}
-		}
-		length++;
+bool lexer_maybe_int(Lexer *l, String_View s) {
+	if (is_obj_int(s.start, s.length)) {
+		l->index += s.length;
+		return true;
 	}
-	return s;
+	return false;
 }
 
+// skip any whitespaces
+void lexer_advance(Lexer *l) {
+	while (l->index < l->file_size && is_whitespace(l->file[l->index]))
+		l->index++;
+}
+
+// TODO: Bump Allocator
 Tokens tokenize(Lexer *l) {
 	// Using heuristic that assumes #tokens < file_size to avoid reallocations.
 	Tokens tokens = tokens_init(l->file_size);
@@ -98,48 +102,184 @@ Tokens tokenize(Lexer *l) {
 	
 	// bool dot = false;
 	
-	bool done = false;
-	
 	// scanning line by line
-	while (!done) {
-		// skip any whitespaces
-		while (l->index < l->file_size && is_whitespace(l->file[l->index]))
-			l->index++;
+	while (l->index < l->file_size) {
+		lexer_advance(l);
 		
-		// scan one line
-		while (l->index < l->file_size && !is_end_of_line(l->file[l->index])) {
-			//char c = l->file[l->index];
-			
-			// scan keyword
-			String_View s = get_next_word(l->file, l->file_size, l->index, " \n\r\t\v\f");
-			if (lexer_maybe(l, s, "v")) {
-				tokens_append(&tokens, (Token){ITEM_v, 0});
-				// TODO: scan 3 or 4 floats
-			} else if (lexer_maybe(l, s, "vt")) {
-				tokens_append(&tokens, (Token){ITEM_vt, 0});
-				// TODO: scan 1-3 floats
-			} else if (lexer_maybe(l, s, "vn")) {
-				tokens_append(&tokens, (Token){ITEM_vn, 0});
-				// TODO: scan 3 floats
-			} else if (lexer_maybe(l, s, "vp")) {
-				tokens_append(&tokens, (Token){ITEM_vp, 0});
-				// TODO: scan ??
-			} else if (lexer_maybe(l, s, "f")) {
-				tokens_append(&tokens, (Token){ITEM_f, 0});
-				// TODO: scan whatever the fuck this is
-			} else if (lexer_maybe(l, s, "o")) {
-				tokens_append(&tokens, (Token){ITEM_o, 0});
-				// TODO: scan identifier
-			} else {
-				// Error! Expected keyword.
-				assert(!"Error while parsing. Keyword expected.");
-				return tokens;
-			}
+		if (l->file[l->index] == '#') {
+			// comment -> ignore
+			while (l->index < l->file_size && !is_end_of_line(l->file[l->index])) l->index++;
+			lexer_advance(l);
 		}
 		
-		done = l->index == l->file_size - 1;
-	}
+		// scan keyword
+		String_View s = get_next_word_no_skip(l->file, l->file_size, l->index, " \n\r\t\v\f");
+		if (lexer_maybe(l, s, "v")) {
+			tokens_append(&tokens, (Token){ITEM_v, 0});
 			
+			// expecting 3-4 floats
+			for (int i = 0; i < 4; ++i) {
+				if (is_end_of_line(l->file[l->index])) {
+					if (i < 3) {
+						// Error! At least three floats required.
+						assert(!"Error while parsing. Expected at least three floats.");
+						return tokens;
+					} else {
+						break;
+					}
+				}
+				Next_Word nw = get_next_word(l->file, l->file_size, l->index, " \n\r\t\v\f");
+				l->index += nw.offset;
+				
+				float f = string_to_float(nw.s.start, nw.s.length); // TODO: write an obj_string_to_float function
+				tokens_append(&tokens, (Token){.type = ITEM_FLOAT, .value = {.f = f}});
+				l->index += nw.s.length;
+			}
+		} else if (lexer_maybe(l, s, "vt")) {
+			tokens_append(&tokens, (Token){ITEM_vt, 0});
+			
+			// expecting 1-3 floats
+			for (int i = 0; i < 3; ++i) {
+				if (is_end_of_line(l->file[l->index])) {
+					if (i < 1) {
+						// Error! At least one float required.
+						assert(!"Error while parsing. Expected at least one float.");
+						return tokens;
+					} else {
+						break;
+					}
+				}
+				Next_Word nw = get_next_word(l->file, l->file_size, l->index, " \n\r\t\v\f");
+				l->index += nw.offset;
+				
+				float f = string_to_float(nw.s.start, nw.s.length); // TODO: write an obj_string_to_float function
+				tokens_append(&tokens, (Token){.type = ITEM_FLOAT, .value = {.f = f}});
+				l->index += nw.s.length;
+			}
+		} else if (lexer_maybe(l, s, "vn")) {
+			tokens_append(&tokens, (Token){ITEM_vn, 0});
+			
+			// expecting 3 floats
+			for (int i = 0; i < 3; ++i) {
+				if (is_end_of_line(l->file[l->index])) {
+					if (i < 3) {
+						// Error! Three floats required.
+						assert(!"Error while parsing. Expected three floats.");
+						return tokens;
+					} else {
+						break;
+					}
+				}
+				Next_Word nw = get_next_word(l->file, l->file_size, l->index, " \n\r\t\v\f");
+				l->index += nw.offset;
+				
+				float f = string_to_float(nw.s.start, nw.s.length); // TODO: write an obj_string_to_float function
+				tokens_append(&tokens, (Token){.type = ITEM_FLOAT, .value = {.f = f}});
+				l->index += nw.s.length;
+			}
+		} else if (lexer_maybe(l, s, "vp")) {
+			tokens_append(&tokens, (Token){ITEM_vp, 0});
+			
+			// expecting 1-3 floats
+			for (int i = 0; i < 3; ++i) {
+				if (is_end_of_line(l->file[l->index])) {
+					if (i < 1) {
+						// Error! At least one float required.
+						assert(!"Error while parsing. Expected at least one float.");
+						return tokens;
+					} else {
+						break;
+					}
+				}
+				Next_Word nw = get_next_word(l->file, l->file_size, l->index, " \n\r\t\v\f");
+				l->index += nw.offset;
+				
+				float f = string_to_float(nw.s.start, nw.s.length); // TODO: write an obj_string_to_float function
+				tokens_append(&tokens, (Token){.type = ITEM_FLOAT, .value = {.f = f}});
+				l->index += nw.s.length;
+			}
+		} else if (lexer_maybe(l, s, "f")) {
+			tokens_append(&tokens, (Token){ITEM_f, 0});
+			
+			// expecting a, a/b, a//c, a/b/c thingies
+			// TODO: loop this, at least three times!
+			while (l->index < l->file_size && !is_end_of_line(l->file[l->index])) {
+				Next_Word nw = get_next_word(l->file, l->file_size, l->index, "/ \n\r\t\v\f");
+				l->index += nw.offset;
+				
+				if (!is_obj_int(nw.s.start, nw.s.length)) {
+					assert(!"Error while parsing! Expected an int.");
+					return tokens;
+				}
+				
+				int i = string_to_int(nw.s.start, nw.s.length);
+				tokens_append(&tokens, (Token){.type = ITEM_INT, .value = {.i = i}});
+				l->index += nw.s.length;
+				// int
+				
+				s = get_next_word_no_skip(l->file, l->file_size, l->index, "0123456789 \n\r\t\v\f");
+				if (lexer_maybe(l, s, "/")) {
+					// int/
+					tokens_append(&tokens, (Token){ITEM_SLASH, 0});
+					if (l->file[l->index] == '/') {
+						// int//
+						s = get_next_word_no_skip(l->file, l->file_size, l->index, "0123456789 \n\r\t\v\f");
+						tokens_append(&tokens, (Token){ITEM_SLASH, 0});
+						l->index += s.length;
+						
+						s = get_next_word_no_skip(l->file, l->file_size, l->index, "/ \n\r\t\v\f");
+						if (lexer_maybe_int(l, s)) {
+							// int//int
+							i = string_to_int(s.start, s.length);
+							tokens_append(&tokens, (Token){ITEM_INT, .value = {.i = i}});
+						} else {
+							assert(!"Error while parsing! Expected an int.");
+							return tokens;	
+						}
+					} else if (is_numeric(l->file[l->index]) || l->file[l->index] == '+' || l->file[l->index] == '-') {
+						// int/int
+						s = get_next_word_no_skip(l->file, l->file_size, l->index, "/ \n\r\t\v\f");
+						i = string_to_int(s.start, s.length);
+						tokens_append(&tokens, (Token){ITEM_INT, .value = {.i = i}});
+						l->index += s.length;
+						
+						s = get_next_word_no_skip(l->file, l->file_size, l->index, "0123456789 \n\r\t\v\f");
+						if (lexer_maybe(l, s, "/")) {
+							// int/int/
+							tokens_append(&tokens, (Token){ITEM_SLASH, 0});
+							s = get_next_word_no_skip(l->file, l->file_size, l->index, "/ \n\r\t\v\f");
+							if (lexer_maybe_int(l, s)) {
+								// int/int/int
+								i = string_to_int(s.start, s.length);
+								tokens_append(&tokens, (Token){ITEM_INT, .value = {.i = i}});
+							} else {
+								assert(!"Error while parsing! Expected an int.");
+								return tokens;		
+							}
+						}
+					} else {
+						// error
+						assert(!"Error while parsing! Expected a '/' or an int.");
+						return tokens;
+					}
+				}
+			}
+		} else if (lexer_maybe(l, s, "o")) {
+			tokens_append(&tokens, (Token){ITEM_o, 0});
+			
+			// expecting identifier
+			Next_Word nw = get_next_word(l->file, l->file_size, l->index, " \n\r\t\v\f");
+			l->index += nw.offset;
+			
+			tokens_append(&tokens, (Token){.type = ITEM_IDENTIFIER, .value = {.s = nw.s}});
+			l->index += nw.s.length;
+		} else {
+			// Error! Expected keyword.
+			assert(!"Error while parsing. Keyword expected.");
+			return tokens;
+		}
+	}
+				
 	return tokens;
 }
 

@@ -115,6 +115,7 @@ inline int round_float(float val) {
 inline float string_to_float(char *str, int len) {
 	char null_terminated_str[16] = {0};
 	memcpy(null_terminated_str, str, len);
+	assert(null_terminated_str[sizeof(null_terminated_str)-1] == '\0');
 	float f = strtof(null_terminated_str, NULL);
 	return(f);
 }
@@ -122,6 +123,7 @@ inline float string_to_float(char *str, int len) {
 inline int string_to_int(char *str, int len) {
 	char null_terminated_str[11] = {0};
 	memcpy(null_terminated_str, str, len);
+	assert(null_terminated_str[sizeof(null_terminated_str)-1] == '\0');
 	int i = (int)strtol(null_terminated_str, NULL, 10);
 	return i;
 }
@@ -194,3 +196,78 @@ inline void *srealloc(void *ptr, size_t size) {
 		things.items[things.count++] = thing;\
 	} while(0)
 		
+
+// skips initial delimiters and returns the next word described by the delimiters as a string view
+String_View get_next_word_no_skip(char *chars, int size, int offset, char *delim) {
+	int d_index = 0;
+	
+	// parse word length
+	String_View s = {chars + offset};
+	int length = 0;
+	while (length + offset < size) {
+		d_index = 0;
+		while (delim[d_index]) {
+			if (offset + length + 1 == size) {
+				s.length = length + (length == 0 ? 1 : 0);
+				return s;
+			} else if (delim[d_index] == chars[offset + length]) {
+				s.length = length;
+				return s;
+			} else {
+				d_index++;
+			}
+		}
+		length++;
+	}
+	return s;
+}
+
+typedef struct Next_Word_S {
+	String_View s;
+	int offset;
+} Next_Word;
+
+// skips initial delimiters and returns the next word described by the delimiters as a string view
+Next_Word get_next_word(char *chars, int size, int offset, char *delim) {
+	Next_Word next_word = {.offset = offset};
+		
+	// skip delimiters
+	int d_index = 0;
+	while (offset < size && delim[d_index]) {
+		if (delim[d_index] == chars[offset]) {
+			d_index = 0;
+			offset++;
+		} else {
+			d_index++;
+			continue;
+		}
+	}
+	
+	next_word.offset = offset - next_word.offset;
+	
+	// parse word length
+	String_View s = {chars + offset};
+	int length = 0;
+	while (length + offset < size) {
+		d_index = 0;
+		while (delim[d_index]) {
+			if (offset + length == size - 1) {
+				s.length = length + (length == 0 ? 1 : 0);
+				next_word.s = s;
+				return next_word;
+			} else if (delim[d_index] == chars[offset + length]) {
+				s.length = length;
+				next_word.s = s;
+				return next_word;
+			} else {
+				d_index++;
+			}
+		}
+		length++;
+	}
+	
+	next_word.s = s;
+	return next_word;
+}
+
+// TODO: maybe get_next_word with function pointer?
