@@ -171,6 +171,19 @@ typedef struct Statement {
 	} statement;
 } Statement;
 
+typedef struct OBJ_Indices {
+	int pos;
+	int texcoords;
+	int normal;
+} OBJ_Indices;
+
+// vec4 positions[whatever] = {{1, -1, 1, 1}, ...};
+// vec3 texcoords[whatever] = {{0, 0}, ...};
+// vec3 normals[whatever] = {{1, 0, 0}, ...};
+// OBJ_Indices indices[whatever] = {{6, 12, 8}, ...};
+
+// How to translate ^ this into opengl element array?
+
 typedef struct OBJ_Data {
 	int test;
 } OBJ_Data;
@@ -367,31 +380,6 @@ Tokens tokenize(Lexer *l, Arena *a) {
 //
 // Parser
 
-typedef struct Parser {
-	Tokens tokens;
-	
-	bool done;
-	
-	// TODO...
-} Parser;
-
-Token next(Parser *p) {
-	return STUB(Token);
-}
-
-Token peek(Parser *p) {
-	return STUB(Token);
-}
-
-bool expect(Parser *p, Token expected) {
-	Token t = next(p);
-	if (t.type == expected.type) {
-		return false;		
-	}
-	return true;
-}
-
-
 Scene obj_parse(byte *obj_file_data, int file_size, Arena *a) {
 	assert(obj_file_data && file_size > 0);
 	
@@ -399,17 +387,6 @@ Scene obj_parse(byte *obj_file_data, int file_size, Arena *a) {
 	
 	Lexer lexer = {(char *)obj_file_data, file_size};
 	Tokens tokens = tokenize(&lexer, a);
-	
-	Parser parser = {tokens};
-	while (!parser.done) {
-		Token t = next(&parser);
 		
-		switch(t.type) {
-			case ITEM_v: 
-			
-				break;
-		}
-	}
-	
 	return s;
 }
