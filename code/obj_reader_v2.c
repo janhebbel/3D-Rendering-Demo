@@ -387,6 +387,8 @@ Scene obj_parse(byte *obj_file_data, int file_size, Arena *a) {
 	
 	Lexer lexer = {(char *)obj_file_data, file_size};
 	Tokens tokens = tokenize(&lexer, a);
+
+	tokens;
 		
 	return s;
 }
