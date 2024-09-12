@@ -23,23 +23,31 @@ typedef struct Token {
 } Token;
 
 typedef struct Tokens {
+	Arena *arena;
 	Token *items;
 	int count;
-	int cap;
+	int size;
 } Tokens;
 
-Tokens tokens_init(int initial_count) {
+#define INITIAL_TOKENS_AMOUNT 128
+
+Tokens tokens_init(Arena *a) {
 	Tokens ts = {0};
-	ts.items = smalloc(initial_count * sizeof(*ts.items));
+
+	int size = INITIAL_TOKENS_AMOUNT * sizeof(*ts.items);
+	
+	ts.arena = a;
+	ts.items = arena_alloc(a, size);
 	ts.count = 0;
-	ts.cap = initial_count;
+	ts.size = size;
+
 	return ts;
 }
 
 void tokens_append(Tokens *ts, Token t) {
-	if (ts->count >= ts->cap) {
-		ts->cap *= 2;
-		ts->items = srealloc(ts->items, ts->cap * sizeof(ts->items[0]));
+	if (ts->count * sizeof(*ts->items) >= ts->size) {
+		ts->items = arena_resize(ts->arena, ts->items, ts->size, ts->size * 2);
+		ts->size *= 2;
 	}
 	ts->items[ts->count++] = t;
 }
@@ -92,10 +100,83 @@ void lexer_advance(Lexer *l) {
 		l->index++;
 }
 
-// TODO: Bump Allocator
-Tokens tokenize(Lexer *l) {
-	// Using heuristic that assumes #tokens < file_size to avoid reallocations.
-	Tokens tokens = tokens_init(l->file_size);
+typedef enum Statement_Type {
+	V_STATEMENT,
+	VT_STATEMENT,
+	VN_STATEMENT,
+	VP_STATEMENT,
+	F_STATEMENT,
+	O_STATEMENT
+} Statement_Type;
+
+typedef struct V_Statement {
+	int count;
+	float f0;
+	float f1;
+	float f2;
+	float f3;
+} V_Statement;
+
+typedef struct VT_Statement {
+	int count;
+	float f0;
+	float f1;
+	float f2;
+} VT_Statement;
+
+typedef struct VN_Statement {
+	float f0;
+	float f1;
+	float f2;
+} VN_Statement;
+
+typedef struct VP_Statement {
+	int count;
+	float f0;
+	float f1;
+	float f3;
+} VP_Statement;
+
+typedef enum OBJ_Vertex_Present_Flags {
+	VT_PRESENT = 0x1,
+	VN_PRESENT = 0x2,
+} Present_Flags;
+
+typedef struct OBJ_Vertex {
+	Present_Flags present_flags;
+	int v_index;
+	int vt_index;
+	int vn_index;
+} OBJ_Vertex;
+
+typedef struct F_Statement {
+	OBJ_Vertex vertex0;
+	OBJ_Vertex vertex1;
+	OBJ_Vertex vertex2;
+} F_Statement;
+
+typedef struct O_Statement {
+	String_View str;
+} O_Statement;
+
+typedef struct Statement {
+	Statement_Type type;
+	union {
+		V_Statement v;
+		VT_Statement vt;
+		VN_Statement vn;
+		VP_Statement vp;
+		F_Statement f;
+		O_Statement o;
+	} statement;
+} Statement;
+
+typedef struct OBJ_Data {
+	int test;
+} OBJ_Data;
+
+Tokens tokenize(Lexer *l, Arena *a) {
+	Tokens tokens = tokens_init(a);
 	
 	// int word_start = 0;
 	// int word_length = 0;
@@ -311,22 +392,22 @@ bool expect(Parser *p, Token expected) {
 }
 
 
-Scene obj_parse(byte *obj_file_data, int file_size) {
+Scene obj_parse(byte *obj_file_data, int file_size, Arena *a) {
 	assert(obj_file_data && file_size > 0);
 	
 	Scene s = {0};
 	
 	Lexer lexer = {(char *)obj_file_data, file_size};
-	Tokens tokens = tokenize(&lexer);
+	Tokens tokens = tokenize(&lexer, a);
 	
 	Parser parser = {tokens};
 	while (!parser.done) {
 		Token t = next(&parser);
 		
 		switch(t.type) {
-		case ITEM_v: 
+			case ITEM_v: 
 			
-			break;
+				break;
 		}
 	}
 	

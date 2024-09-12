@@ -16,8 +16,8 @@
 #include "renderer.h"
 #include "settings.h"
 
-#include "arena.c"
 #include "utils.c"
+#include "arena.c"
 #include "win32_utils.c"
 #include "input.c"
 #include "handle_input.c"
@@ -227,13 +227,14 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE prev_instance, PWCHAR cmd_li
 			// cube.vertex_count = 5;
 			// cube.index_array = (unsigned int[18]){1, 0, 4, 2, 1, 4, 3, 2, 4, 0, 3, 4, 0, 2, 3, 0, 1, 2};
 			// cube.index_count = 18;
-			
-			// Arena permanent_arena = arena_create(MEGABYTES(1));
-			// Arena scratch_arena = arena_create(MEGABYTES(1));
 
+			void *backing_buffer = smalloc(MEGABYTES(1));
+			Arena scratch_arena = arena_create(backing_buffer, MEGABYTES(1));
+			
 			int obj_file_size;
 			byte *scene_data = read_file("../assets/cube.obj", &obj_file_size);
-			Scene scene = obj_parse(scene_data, obj_file_size);
+			Scene scene = obj_parse(scene_data, obj_file_size, &scratch_arena);
+			free(scene_data);
 
 			view_control_t control = {
 				.position = {0.0f, 0.0f, 5.0f},

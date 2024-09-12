@@ -53,6 +53,26 @@ inline int is_alphanumeric(char c) {
 	return(is_alphabetic(c) || is_numeric(c));
 }
 
+inline int is_power_of_two(uintptr_t x) {
+	return (x & (x-1)) == 0;
+}
+
+uintptr_t align_forward(uintptr_t ptr, size_t align) {
+	uintptr_t p, a, modulo;
+
+	assert(is_power_of_two(align));
+
+	p = ptr;
+	a = (uintptr_t)align;
+	modulo = p & (a-1);
+
+	if (modulo != 0) {
+		p += a - modulo;
+	}
+
+	return p;
+}
+
 inline int strings_are_equal(char *a, char *b) {
 	int result = (a == b);
 	
@@ -136,33 +156,6 @@ inline int parse_one_word(char *str, int len, int offset, int *word_len_out) {
 	return(start_idx);
 }
 
-byte *read_file(char *filename, int *filesize) {
-	if (!filename) {
-		return NULL;
-	}
-	
-	FILE *file = fopen(filename, "rb");
-	fseek(file, 0, SEEK_END);
-	int size = ftell(file) + 1;
-	rewind(file);
-	
-	void *file_data = malloc(size);
-	if (!file_data) {
-		assert(!"Malloc failed.");
-		exit(-1);
-	}
-	
-	size = (int)fread(file_data, 1, size, file);
-	if (ferror(file)) {
-		assert(!"Error.");
-		return NULL;
-	}
-	
-	if (filesize) *filesize = size;
-	
-	return file_data;
-}
-
 inline void *smalloc(size_t size) {
 	void *m = malloc(size);
 	if (!m) {
@@ -179,6 +172,29 @@ inline void *srealloc(void *ptr, size_t size) {
 		exit(-1);
 	}
 	return memset(n, 0, size);
+}
+
+byte *read_file(char *filename, int *filesize) {
+	if (!filename) {
+		return NULL;
+	}
+	
+	FILE *file = fopen(filename, "rb");
+	fseek(file, 0, SEEK_END);
+	int size = ftell(file) + 1;
+	rewind(file);
+	
+	void *file_data = smalloc(size);
+	
+	size = (int)fread(file_data, 1, size, file);
+	if (ferror(file)) {
+		assert(!"Error.");
+		return NULL;
+	}
+	
+	if (filesize) *filesize = size;
+	
+	return file_data;
 }
 
 // Credit: Tsoding
