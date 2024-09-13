@@ -322,6 +322,23 @@ typedef struct OBJ_Vertex_Attributes {
 	int ncount;
 } OBJ_Vertex_Attributes;
 
+bool textured_vertex_compare(Textured_Vertex *v1, Textured_Vertex *v2) {
+	return memcmp(v1, v2, sizeof(*v1)) == 0;
+}
+
+// look for vertex in the scene's vertex array,
+// if one like it exists then return its index,
+// else return a value smaller 0
+int obj_get_index(Scene *s, Textured_Vertex *vertex) {
+	for (int i = 0; i < s->vertex_count; ++i) {
+		if (textured_vertex_compare(&s->vertex_array[i], vertex)) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
 Scene obj_parse(byte *obj_file_data, int file_size, Arena *scratch) {
 	assert(obj_file_data && file_size > 0);
 	
@@ -411,7 +428,22 @@ Scene obj_parse(byte *obj_file_data, int file_size, Arena *scratch) {
 		}
 			
 		case ITEM_f: {
+			Textured_Vertex vertex;
+			memset(&vertex, 0, sizeof(Textured_Vertex)); // NOTE: set 0 here because of compare function
 			
+			int pidx = 0, uvidx = 0, nidx = 0;
+			
+			// TODO: acquire pidx, uvidx, and nidx
+			
+			cglm_vec4_set(vertex.position, vertices.p[pidx]);
+			cglm_vec2_set(vertex.uv, vertices.uv[uvidx]);
+			cglm_vec3_set(vertex.normal, vertices.n[nidx]);
+			
+			int index = obj_get_index(&s, &vertex);
+			if (index < 0) {
+				// vertex not found, place it in the back of vertex array
+				// index := vertices_append(vertices, vertex);
+			}
 			break;
 		}
 			
