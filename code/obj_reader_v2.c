@@ -61,6 +61,10 @@ typedef struct Lexer {
 	
 	int index;
 	int state;
+
+	int vcount;
+	int vtcount;
+	int vncount;
 } Lexer;
 
 bool is_obj_int(char *string, int length) {
@@ -100,94 +104,6 @@ void lexer_advance(Lexer *l) {
 		l->index++;
 }
 
-typedef enum Statement_Type {
-	V_STATEMENT,
-	VT_STATEMENT,
-	VN_STATEMENT,
-	VP_STATEMENT,
-	F_STATEMENT,
-	O_STATEMENT
-} Statement_Type;
-
-typedef struct V_Statement {
-	int count;
-	float f0;
-	float f1;
-	float f2;
-	float f3;
-} V_Statement;
-
-typedef struct VT_Statement {
-	int count;
-	float f0;
-	float f1;
-	float f2;
-} VT_Statement;
-
-typedef struct VN_Statement {
-	float f0;
-	float f1;
-	float f2;
-} VN_Statement;
-
-typedef struct VP_Statement {
-	int count;
-	float f0;
-	float f1;
-	float f3;
-} VP_Statement;
-
-typedef enum OBJ_Vertex_Present_Flags {
-	VT_PRESENT = 0x1,
-	VN_PRESENT = 0x2,
-} Present_Flags;
-
-typedef struct OBJ_Vertex {
-	Present_Flags present_flags;
-	int v_index;
-	int vt_index;
-	int vn_index;
-} OBJ_Vertex;
-
-typedef struct F_Statement {
-	OBJ_Vertex vertex0;
-	OBJ_Vertex vertex1;
-	OBJ_Vertex vertex2;
-} F_Statement;
-
-typedef struct O_Statement {
-	String_View str;
-} O_Statement;
-
-typedef struct Statement {
-	Statement_Type type;
-	union {
-		V_Statement v;
-		VT_Statement vt;
-		VN_Statement vn;
-		VP_Statement vp;
-		F_Statement f;
-		O_Statement o;
-	} statement;
-} Statement;
-
-typedef struct OBJ_Indices {
-	int pos;
-	int texcoords;
-	int normal;
-} OBJ_Indices;
-
-// vec4 positions[whatever] = {{1, -1, 1, 1}, ...};
-// vec3 texcoords[whatever] = {{0, 0}, ...};
-// vec3 normals[whatever] = {{1, 0, 0}, ...};
-// OBJ_Indices indices[whatever] = {{6, 12, 8}, ...};
-
-// How to translate ^ this into opengl element array?
-
-typedef struct OBJ_Data {
-	int test;
-} OBJ_Data;
-
 Tokens tokenize(Lexer *l, Arena *a) {
 	Tokens tokens = tokens_init(a);
 	
@@ -209,6 +125,7 @@ Tokens tokenize(Lexer *l, Arena *a) {
 		// scan keyword
 		String_View s = get_next_word_no_skip(l->file, l->file_size, l->index, " \n\r\t\v\f");
 		if (lexer_maybe(l, s, "v")) {
+			l->vcount++;
 			tokens_append(&tokens, (Token){ITEM_v, 0});
 			
 			// expecting 3-4 floats
@@ -224,12 +141,14 @@ Tokens tokenize(Lexer *l, Arena *a) {
 				}
 				Next_Word nw = get_next_word(l->file, l->file_size, l->index, " \n\r\t\v\f");
 				l->index += nw.offset;
-				
-				float f = string_to_float(nw.s.start, nw.s.length); // TODO: write an obj_string_to_float function
+
+				// TODO: test if float
+				float f = string_to_float(nw.s.start, nw.s.length);
 				tokens_append(&tokens, (Token){.type = ITEM_FLOAT, .value = {.f = f}});
 				l->index += nw.s.length;
 			}
 		} else if (lexer_maybe(l, s, "vt")) {
+			l->vtcount++;
 			tokens_append(&tokens, (Token){ITEM_vt, 0});
 			
 			// expecting 1-3 floats
@@ -245,12 +164,14 @@ Tokens tokenize(Lexer *l, Arena *a) {
 				}
 				Next_Word nw = get_next_word(l->file, l->file_size, l->index, " \n\r\t\v\f");
 				l->index += nw.offset;
-				
-				float f = string_to_float(nw.s.start, nw.s.length); // TODO: write an obj_string_to_float function
+
+				// TODO: test if float
+				float f = string_to_float(nw.s.start, nw.s.length);
 				tokens_append(&tokens, (Token){.type = ITEM_FLOAT, .value = {.f = f}});
 				l->index += nw.s.length;
 			}
 		} else if (lexer_maybe(l, s, "vn")) {
+			l->vncount++;
 			tokens_append(&tokens, (Token){ITEM_vn, 0});
 			
 			// expecting 3 floats
@@ -266,8 +187,9 @@ Tokens tokenize(Lexer *l, Arena *a) {
 				}
 				Next_Word nw = get_next_word(l->file, l->file_size, l->index, " \n\r\t\v\f");
 				l->index += nw.offset;
-				
-				float f = string_to_float(nw.s.start, nw.s.length); // TODO: write an obj_string_to_float function
+
+				// TODO: test if float
+				float f = string_to_float(nw.s.start, nw.s.length);
 				tokens_append(&tokens, (Token){.type = ITEM_FLOAT, .value = {.f = f}});
 				l->index += nw.s.length;
 			}
@@ -287,8 +209,9 @@ Tokens tokenize(Lexer *l, Arena *a) {
 				}
 				Next_Word nw = get_next_word(l->file, l->file_size, l->index, " \n\r\t\v\f");
 				l->index += nw.offset;
-				
-				float f = string_to_float(nw.s.start, nw.s.length); // TODO: write an obj_string_to_float function
+
+				// TODO: test if float
+				float f = string_to_float(nw.s.start, nw.s.length);
 				tokens_append(&tokens, (Token){.type = ITEM_FLOAT, .value = {.f = f}});
 				l->index += nw.s.length;
 			}
@@ -296,8 +219,10 @@ Tokens tokenize(Lexer *l, Arena *a) {
 			tokens_append(&tokens, (Token){ITEM_f, 0});
 			
 			// expecting a, a/b, a//c, a/b/c thingies
-			// TODO: loop this, at least three times!
+			int poly_corner_count = 0;
 			while (l->index < l->file_size && !is_end_of_line(l->file[l->index])) {
+				poly_corner_count++;
+				
 				Next_Word nw = get_next_word(l->file, l->file_size, l->index, "/ \n\r\t\v\f");
 				l->index += nw.offset;
 				
@@ -358,6 +283,11 @@ Tokens tokenize(Lexer *l, Arena *a) {
 					}
 				}
 			}
+
+			if (poly_corner_count != 3) {
+				assert(!"Only triangles supported!");
+				return tokens;
+			}
 		} else if (lexer_maybe(l, s, "o")) {
 			tokens_append(&tokens, (Token){ITEM_o, 0});
 			
@@ -380,15 +310,84 @@ Tokens tokenize(Lexer *l, Arena *a) {
 //
 // Parser
 
-Scene obj_parse(byte *obj_file_data, int file_size, Arena *a) {
+typedef struct OBJ_Vertex_Attributes {
+	// v
+	vec4 *p;
+	int pcount;
+	// vt
+	vec3 *uv;
+	int uvcount;
+	// vn
+	vec3 *n;
+	int ncount;
+} OBJ_Vertex_Attributes;
+
+Scene obj_parse(byte *obj_file_data, int file_size, Arena *scratch) {
 	assert(obj_file_data && file_size > 0);
 	
 	Scene s = {0};
-	
-	Lexer lexer = {(char *)obj_file_data, file_size};
-	Tokens tokens = tokenize(&lexer, a);
 
-	tokens;
-		
+	// lexing
+	Lexer lexer = {(char *)obj_file_data, file_size};
+	Tokens tokens = tokenize(&lexer, scratch);
+
+	// parsing
+	OBJ_Vertex_Attributes vertices = {0};
+	vertices.p  = arena_alloc(scratch, lexer.vcount  * sizeof(*vertices.p));
+	vertices.uv = arena_alloc(scratch, lexer.vtcount * sizeof(*vertices.uv));
+	vertices.n  = arena_alloc(scratch, lexer.vncount * sizeof(*vertices.n));
+	
+	for (int i = 0; i < tokens.count; ++i) {
+		switch(tokens.items[i].type) {
+		case ITEM_v:
+			i++;
+			
+			vec4 pos;
+			int j;
+			for (j = 0; j < 3; ++j) {
+				assert(i + j < tokens.count);
+				assert(tokens.items[i + j].type == ITEM_FLOAT);
+				
+				pos[j] = tokens.items[i + j].value.f;
+			}
+
+			assert(i + j < tokens.count);
+			if (tokens.items[i + j].type == ITEM_FLOAT) {
+				pos[j] = tokens.items[i + j].value.f;
+			} else {
+				pos[j] = 1.0f;
+			}
+
+			cglm_vec4_set(vertices.p[vertices.pcount++], pos); // vertices.p[vertices.pcount++] = pos
+
+			i += j - 1;
+			break;
+			
+		case ITEM_vt:
+			
+			break;
+			
+		case ITEM_vn:
+			
+			break;
+			
+		case ITEM_vp:
+			
+			break;
+			
+		case ITEM_f:
+			break;
+			
+		case ITEM_o:
+			break;
+
+		/* default: */
+		/* 	assert(!"Shouldn't be reachable."); */
+		/* 	return s; */
+		}
+	}
+
+	arena_free_all(scratch);
+
 	return s;
 }
