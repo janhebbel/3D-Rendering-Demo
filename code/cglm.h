@@ -79,6 +79,7 @@ CGLMDEF float cglm_cot(float turn);
 
 //
 // float vector 2
+CGLMDEF void cglm_vec2_set(vec2 v1, vec2 v2);
 CGLMDEF void cglm_vec2_add(vec2 v1, vec2 v2, vec2 dst);
 CGLMDEF void cglm_vec2_sub(vec2 v1, vec2 v2, vec2 dst);
 CGLMDEF void cglm_vec2_mul(vec2 v1, vec2 v2, vec2 dst);
@@ -92,6 +93,7 @@ CGLMDEF void cglm_vec2_scale_this(vec2 v, float s);
 
 //
 // float vector 3
+CGLMDEF void cglm_vec3_set(vec3 v1, vec3 v2);
 CGLMDEF void cglm_vec3_add(vec3 v1, vec3 v2, vec3 dst);
 CGLMDEF void cglm_vec3_sub(vec3 v1, vec3 v2, vec3 dst);
 CGLMDEF void cglm_vec3_mul(vec3 v1, vec3 v2, vec3 dst);
@@ -234,6 +236,11 @@ CGLMDEF float cglm_cot(float turn) {
 
 //
 // float vector 2
+CGLMDEF void cglm_vec2_set(vec2 v1, vec2 v2) {
+	v1[0] = v2[0];
+	v1[1] = v2[1];
+}
+
 CGLMDEF void cglm_vec2_add(vec2 v1, vec2 v2, vec2 dst) {
     dst[0] = v1[0] + v2[0];
     dst[1] = v1[1] + v2[1];
@@ -284,6 +291,12 @@ CGLMDEF void  cglm_vec2_scale_this(vec2 v, float s) {
 
 //
 // float vector 3
+CGLMDEF void cglm_vec3_set(vec3 v1, vec3 v2) {
+	v1[0] = v2[0];
+	v1[1] = v2[1];
+	v1[2] = v2[2];
+}
+
 CGLMDEF void cglm_vec3_add(vec3 v1, vec3 v2, vec3 dst) {
     dst[0] = v1[0] + v2[0];
     dst[1] = v1[1] + v2[1];

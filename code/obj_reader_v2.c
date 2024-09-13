@@ -315,7 +315,7 @@ typedef struct OBJ_Vertex_Attributes {
 	vec4 *p;
 	int pcount;
 	// vt
-	vec3 *uv;
+	vec2 *uv;
 	int uvcount;
 	// vn
 	vec3 *n;
@@ -336,10 +336,10 @@ Scene obj_parse(byte *obj_file_data, int file_size, Arena *scratch) {
 	vertices.p  = arena_alloc(scratch, lexer.vcount  * sizeof(*vertices.p));
 	vertices.uv = arena_alloc(scratch, lexer.vtcount * sizeof(*vertices.uv));
 	vertices.n  = arena_alloc(scratch, lexer.vncount * sizeof(*vertices.n));
-	
+
 	for (int i = 0; i < tokens.count; ++i) {
 		switch(tokens.items[i].type) {
-		case ITEM_v:
+		case ITEM_v: {
 			i++;
 			
 			vec4 pos;
@@ -362,28 +362,73 @@ Scene obj_parse(byte *obj_file_data, int file_size, Arena *scratch) {
 
 			i += j - 1;
 			break;
+		}
 			
-		case ITEM_vt:
-			
-			break;
-			
-		case ITEM_vn:
-			
-			break;
-			
-		case ITEM_vp:
-			
-			break;
-			
-		case ITEM_f:
-			break;
-			
-		case ITEM_o:
-			break;
+		case ITEM_vt: {
+			i++;
 
-		/* default: */
-		/* 	assert(!"Shouldn't be reachable."); */
-		/* 	return s; */
+			vec2 uv;
+			int j;
+			for (j = 0; j < 2; ++j) {
+				assert(i + j < tokens.count);
+
+				if (tokens.items[i + j].type != ITEM_FLOAT) {
+					break;
+				}
+				
+				uv[j] = tokens.items[i + j].value.f;
+			}
+
+			assert(j == 2); // only texture coordinates with u and v component supported
+
+			cglm_vec2_set(vertices.uv[vertices.uvcount++], uv);
+
+			i += j - 1;
+			break;
+		}
+			
+		case ITEM_vn: {
+			i++;
+
+			vec3 n;
+			int j;
+			for (j = 0; j < 3; ++j) {
+				assert(i + j < tokens.count);
+				assert(tokens.items[i+j].type == ITEM_FLOAT);
+
+				n[j] = tokens.items[i+j].value.f;
+			}
+
+			cglm_vec3_set(vertices.n[vertices.ncount++], n);
+
+			i += j - 1;
+			break;
+		}
+			
+		case ITEM_vp: {
+			// TODO
+			break;
+		}
+			
+		case ITEM_f: {
+			
+			break;
+		}
+			
+		case ITEM_o: {
+			// TODO
+			i++;
+			break;
+		}
+
+		// case ITEM_FLOAT: case ITEM_INT: case ITEM_IDENTIFIER: case ITEM_SLASH: {
+		// 	assert(!"These should be handled in the keyword cases.!");
+		// 	return s;
+		// }
+
+		// default:
+		// 	assert(!"Shouldn't be reachable.");
+		// 	return s;
 		}
 	}
 
