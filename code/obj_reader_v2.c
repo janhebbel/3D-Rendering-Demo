@@ -298,7 +298,7 @@ Tokens tokenize(Lexer *l, Arena *a) {
 			tokens_append(&tokens, (Token){.type = ITEM_IDENTIFIER, .value = {.s = nw.s}});
 			l->index += nw.s.length;
 		} else {
-			// Error! Expected keyword.
+			// Error! Expected keyword. Or keyword not supported.
 			assert(!"Error while parsing. Keyword expected.");
 			return tokens;
 		}
@@ -339,10 +339,12 @@ int obj_get_index(Scene *s, Textured_Vertex *vertex) {
 	return -1;
 }
 
-Scene obj_parse(byte *obj_file_data, int file_size, Arena *scratch) {
+Scene obj_parse(byte *obj_file_data, int file_size, Arena *permanent_arena, Arena *scratch) {
 	assert(obj_file_data && file_size > 0);
 	
-	Scene s = {0};
+	Scene scene = {0};
+	scene.vertex_array = arena_alloc(permanent_arena, SCENE_MAX_VERTEX_COUNT * sizeof(*scene.vertex_array));
+	scene.index_array = arena_alloc(permanent_arena, 2 * SCENE_MAX_VERTEX_COUNT * sizeof(*scene.index_array));
 
 	// lexing
 	Lexer lexer = {(char *)obj_file_data, file_size};
@@ -420,7 +422,7 @@ Scene obj_parse(byte *obj_file_data, int file_size, Arena *scratch) {
 
 			i += j - 1;
 			break;
-		}
+ 		}
 			
 		case ITEM_vp: {
 			// TODO
@@ -428,22 +430,62 @@ Scene obj_parse(byte *obj_file_data, int file_size, Arena *scratch) {
 		}
 			
 		case ITEM_f: {
-			Textured_Vertex vertex;
-			memset(&vertex, 0, sizeof(Textured_Vertex)); // NOTE: set 0 here because of compare function
+			i++;
+
+			for (int k = 0; k < 3; ++k) {
+				Textured_Vertex vertex;
+				memset(&vertex, 0, sizeof(Textured_Vertex)); // NOTE: set 0 here because of memcmp on this struct
 			
-			int pidx = 0, uvidx = 0, nidx = 0;
-			
-			// TODO: acquire pidx, uvidx, and nidx
-			
-			cglm_vec4_set(vertex.position, vertices.p[pidx]);
-			cglm_vec2_set(vertex.uv, vertices.uv[uvidx]);
-			cglm_vec3_set(vertex.normal, vertices.n[nidx]);
-			
-			int index = obj_get_index(&s, &vertex);
-			if (index < 0) {
-				// vertex not found, place it in the back of vertex array
-				// index := vertices_append(vertices, vertex);
+				int pidx = 0, uvidx = 0, nidx = 0;
+				int slash_count = 0;
+				
+				int token_count = 0;
+				for (int j = 0; j < 5; ++j) {
+					assert(i + j < tokens.count);
+					assert(tokens.items[i+j].type == ITEM_INT || tokens.items[i+j].type == ITEM_SLASH);
+
+					token_count++;
+					
+					if (tokens.items[i+j].type == ITEM_SLASH) {
+						slash_count++;
+						assert(slash_count <= 2);
+						continue;
+					}
+
+					switch (slash_count) {
+					case 0:
+						pidx = tokens.items[i+j].value.i - 1;  // obj indices start at 1
+						break;
+					case 1:
+						uvidx = tokens.items[i+j].value.i - 1; // obj indices start at 1
+						break;
+					case 2:
+						nidx = tokens.items[i+j].value.i - 1;  // obj indices start at 1
+						break;
+					}
+
+					if (i + j + 1 >= tokens.count || tokens.items[i+j].type == tokens.items[i+j+1].type)
+						break;
+				}
+				i += token_count;
+
+				assert(pidx < vertices.pcount && uvidx < vertices.uvcount && nidx < vertices.ncount);
+				cglm_vec4_set(vertex.position, vertices.p[pidx]);
+				cglm_vec2_set(vertex.uv, vertices.uv[uvidx]);
+				cglm_vec3_set(vertex.normal, vertices.n[nidx]);
+
+				int index = obj_get_index(&scene, &vertex);
+				if (index < 0) {
+					// vertex not found, place it in the back of vertex array
+					scene.index_array[scene.index_count++] = scene.vertex_count;
+					scene.vertex_array[scene.vertex_count++] = vertex;
+				} else {
+					// vertex found, put index into index array
+					scene.index_array[scene.index_count++] = index;
+				}
 			}
+			i--;
+
 			break;
 		}
 			
@@ -453,11 +495,6 @@ Scene obj_parse(byte *obj_file_data, int file_size, Arena *scratch) {
 			break;
 		}
 
-		// case ITEM_FLOAT: case ITEM_INT: case ITEM_IDENTIFIER: case ITEM_SLASH: {
-		// 	assert(!"These should be handled in the keyword cases.!");
-		// 	return s;
-		// }
-
 		// default:
 		// 	assert(!"Shouldn't be reachable.");
 		// 	return s;
@@ -466,5 +503,5 @@ Scene obj_parse(byte *obj_file_data, int file_size, Arena *scratch) {
 
 	arena_free_all(scratch);
 
-	return s;
+	return scene;
 }

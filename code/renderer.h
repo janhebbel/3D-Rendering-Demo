@@ -1,3 +1,5 @@
+#define SCENE_MAX_VERTEX_COUNT 10000
+
 typedef struct Textured_Vertex {
     vec4 position;
     vec2 uv;
